@@ -34,26 +34,23 @@ const CreatePoint = () => {
     const [selectedUf, setSelectedUf] = useState('0');
     const [selectedCity, setSelectedCity] = useState('0');
     const [selectedPosition, setSelectedPosition] = useState<[number, number]>([0, 0]);
+    const [selectedItems, setSelectedItem] = useState<number[]>([0, 0]);
+    const [initialPosition, setInicialPosition] = useState<[number, number]>([0, 0]);
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        whatsapp: ''
+    });
     
+    // useEffect com [] é carregado quando a página é carregada, sem depedências.
+    useEffect( () => {
+        navigator.geolocation.getCurrentPosition(position => {
+            const { latitude, longitude } = position.coords;
 
-    function handleSelectUf(event: ChangeEvent<HTMLSelectElement>) {
-        const uf = event.target.value;
-        setSelectedUf(uf);
-        console.log(selectedUf);
-    }
-
-    function handleSelectCity(event: ChangeEvent<HTMLSelectElement>) {
-        const city = event.target.value;
-        setSelectedCity(city);
-        console.log(selectedCity);
-    }
-
-    function handleMapClick(event: LeafletMouseEvent) {
-        setSelectedPosition([
-            event.latlng.lat, 
-            event.latlng.lng
-        ]);
-    }
+            setInicialPosition([latitude, longitude]);
+        });
+        
+    }, []);
 
     useEffect( () => {
         api.get('items').then(response => {
@@ -78,6 +75,42 @@ const CreatePoint = () => {
         
     }, [selectedUf]);
 
+    function handleSelectUf(event: ChangeEvent<HTMLSelectElement>) {
+        const uf = event.target.value;
+        setSelectedUf(uf);
+        console.log(selectedUf);
+    }
+
+    function handleSelectCity(event: ChangeEvent<HTMLSelectElement>) {
+        const city = event.target.value;
+        setSelectedCity(city);
+        console.log(selectedCity);
+    }
+
+    function handleMapClick(event: LeafletMouseEvent) {
+        setSelectedPosition([
+            event.latlng.lat, 
+            event.latlng.lng
+        ]);
+    }
+
+    function handleInputChange(event: ChangeEvent<HTMLInputElement>) {
+        const { name, value } = event.target;
+        setFormData({ ...formData, [name]: value });
+    }
+
+    function handleSelectItem(id: number) {
+        const alreadySelected = selectedItems.findIndex(item => item === id);
+
+        if(alreadySelected >=0) {
+            const filteredItems = selectedItems.filter(item => item !== id);
+
+            setSelectedItem(filteredItems);
+        } else {
+            setSelectedItem([...selectedItems, id]);
+        }
+    }
+
     return (
         <div id="page-create-point">
             <header>
@@ -99,10 +132,11 @@ const CreatePoint = () => {
 
                     <div className="field">
                         <label htmlFor="name">Nome da entidade</label>
-                        <input 
+                        <input
                             type="text"
                             name="name"
                             id="name"
+                            onChange={handleInputChange}
                         />
                     </div>
 
@@ -114,6 +148,7 @@ const CreatePoint = () => {
                                 type="email"
                                 name="email"
                                 id="email"
+                                onChange={handleInputChange}
                             />
                         </div>
 
@@ -123,6 +158,7 @@ const CreatePoint = () => {
                                 type="text"
                                 name="whatsapp"
                                 id="whatsapp"
+                                onChange={handleInputChange}
                             />
                         </div>
 
@@ -136,7 +172,7 @@ const CreatePoint = () => {
                     </legend>
                 </fieldset>
 
-                <Map center={[-22.899469, -47.066435]} zoom={15} onClick={handleMapClick}>
+                <Map center={initialPosition} zoom={15} onClick={handleMapClick}>
                     <TileLayer
                         attribution='&amp;copy <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -176,7 +212,11 @@ const CreatePoint = () => {
 
                     <ul className="items-grid">
                         { items. map( (item) => (
-                            <li key={item.id} className="selected">
+                            <li 
+                                key={item.id} 
+                                onClick={() => handleSelectItem(item.id) }
+                                className={ selectedItems.includes(item.id) ? 'selected' : '' }
+                            >
                                 <img src={item.image_url} alt={item.title}/>
                                 <span>{item.title}</span>
                             </li> 
